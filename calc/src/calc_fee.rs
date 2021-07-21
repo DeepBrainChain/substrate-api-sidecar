@@ -52,6 +52,7 @@ impl Multiplier {
             ("statemine", _v) => V2(new_u128(inner)),
             ("statemint", _v) => V2(new_u128(inner)),
 
+            ("node", _v) => V2(new_u128(inner)),
             ("westmine", _v) => V2(new_u128(inner)),
             ("westmint", _v) => V2(new_u128(inner)),
 
@@ -149,12 +150,7 @@ impl CalcFee {
         Some(calc)
     }
 
-    pub fn calc_fee(
-        &self, 
-        weight: Weight, 
-        len: u32, 
-        extrinsic_base_weight: Weight,
-    ) -> String {
+    pub fn calc_fee(&self, weight: Weight, len: u32, extrinsic_base_weight: Weight) -> String {
         let unadjusted_len_fee = self.per_byte_fee.saturating_mul(len.into());
         let unadjusted_weight_fee = weight_to_fee(&weight, &self.polynomial);
         let base_fee = weight_to_fee(&extrinsic_base_weight, &self.polynomial);

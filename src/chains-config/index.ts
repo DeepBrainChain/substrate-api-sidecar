@@ -4,6 +4,7 @@ import { AbstractService } from 'src/services/AbstractService';
 
 import { controllers } from '../controllers';
 import { ControllerConfig } from '../types/chains-config';
+import { dbcControllers } from './dbcControllers';
 import { defaultControllers } from './defaultControllers';
 import { dockMainnetControllers } from './dockMainnetControllers';
 import { dockPoSMainnetControllers } from './dockPoSMainnetControllers';
@@ -26,6 +27,7 @@ const specToControllerMap = {
 	kulupu: kulupuControllers,
 	kilt: kiltControllers,
 	mandala: mandalaControllers,
+	node: dbcControllers,
 	'dock-main-runtime': dockMainnetControllers,
 	'dock-pos-main-runtime': dockPoSMainnetControllers,
 	'dock-pos-test-runtime': dockTestnetControllers,
