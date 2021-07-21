@@ -15,6 +15,7 @@ import { kusamaDefinitions } from './kusamaConsts';
 import { polkadotDefinitions } from './polkadotConsts';
 import { polymeshDefinitions } from './polymeshConsts';
 import { westendDefinitions } from './westendConsts';
+import { dbcDefinitions } from './dbcConsts';
 
 /**
  * Creates an object that maps each runtime to their appropriate weight data.
@@ -85,6 +86,8 @@ export function getBlockWeight(specName: string): BlockWeightStore {
 			return generateBlockWeightStore(dockPoSMainnetDefinitions);
 		case 'dock-pos-test-runtime':
 			return generateBlockWeightStore(dockPoSTestnetDefinitions);
+		case 'node':
+			return generateBlockWeightStore(dbcDefinitions);
 		default:
 			return {};
 	}
