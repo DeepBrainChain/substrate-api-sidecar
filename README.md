@@ -20,6 +20,28 @@
 
 <br /><br />
 
+## 安装说明：
+
+``` bash
+
+git clone https://github.com/DeepBrainChain/substrate-api-sidecar.git
+# 在substrate-api-sidecar下:
+yarn
+
+# 生成calc_bg.wasm:
+# cargo install wasm-pack
+# cd substrate-api-sidecar/calc && ./build.sh
+
+export SAS_SUBSTRATE_WS_URL=wss://info.dbcwallet.io
+export SAS_EXPRESS_BIND_HOST="0.0.0.0"
+
+# 将支持dbc的wasm复制到@substrate/calc下
+cp calc/pkg/calc_bg.wasm node_modules/@substrate/calc/
+
+yarn build
+yarn start
+```
+
 ## Note
 
 v1.0.0 was released on 2020-10-23. This major release introduced several renamed endpoints as breaking changes. It is important that users complete the transition to the new endpoints ASAP so they are ready for any subsequent emergency updates. Please visit the [MIGRATION_GUIDE](./guides/MIGRATION_GUIDE.md) to
