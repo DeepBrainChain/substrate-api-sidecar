@@ -22,7 +22,7 @@ export const dbcControllers: ControllerConfig = {
 	],
 	options: {
 		finalizes: true,
-		minCalcFeeRuntime: 1,
+		minCalcFeeRuntime: 2,
 		blockWeightStore: getBlockWeight('node'),
 	},
 };
