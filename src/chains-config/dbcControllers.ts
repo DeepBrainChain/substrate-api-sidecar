@@ -5,13 +5,21 @@ import { getBlockWeight } from './metadata-consts';
  */
 export const dbcControllers: ControllerConfig = {
 	controllers: [
-		'AccountsAssets',
+        'AccountsAssets',
+		'AccountsBalanceInfo',
+		'AccountsStakingInfo',
+		'AccountsStakingPayouts',
+		'AccountsVestingInfo',
 		'Blocks',
 		'BlocksExtrinsics',
+		'BlocksTrace',
 		'NodeNetwork',
 		'NodeTransactionPool',
 		'NodeVersion',
-		'PalletsAssets',
+        'PalletsAssets',
+		'PalletsStakingProgress',
+		'PalletsStorage',
+		'Paras',
 		'RuntimeCode',
 		'RuntimeMetadata',
 		'RuntimeSpec',
