@@ -1,4 +1,3 @@
-
 <br /><br />
 
 <div align="center">
@@ -22,17 +21,18 @@
 
 ## 安装说明：
 
-``` bash
+```bash
 
 git clone https://github.com/DeepBrainChain/substrate-api-sidecar.git
 # 在substrate-api-sidecar下:
 yarn
 
-# 生成calc_bg.wasm:
+# 生成calc_bg.wasm (calc_bg.wasm已编译好，不用手动编译，可直接跳过这一步):
 # cargo install wasm-pack
 # cd substrate-api-sidecar/calc && ./build.sh
 
-export SAS_SUBSTRATE_TYPES="./dbc_types.json"
+# 修改成绝对路径
+export SAS_SUBSTRATE_TYPES="/你的目录/dbc_types.json"
 export SAS_SUBSTRATE_WS_URL=wss://info.dbcwallet.io
 export SAS_EXPRESS_BIND_HOST="0.0.0.0"
 
@@ -151,15 +151,15 @@ For more information on our configuration manager visit its readme [here](https:
 
 ### Express server
 
--   `SAS_EXPRESS_BIND_HOST`: address on which the server will be listening, defaults to `127.0.0.1`.
--   `SAS_EXPRESS_PORT`: port on which the server will be listening, defaults to `8080`.
--   `SAS_EXPRESS_LOG_MODE`: enable console logging of "all" HTTP requests, only "errors", or nothing by
-    setting it to anything else. LOG_MODE defaults to only "errors".
+- `SAS_EXPRESS_BIND_HOST`: address on which the server will be listening, defaults to `127.0.0.1`.
+- `SAS_EXPRESS_PORT`: port on which the server will be listening, defaults to `8080`.
+- `SAS_EXPRESS_LOG_MODE`: enable console logging of "all" HTTP requests, only "errors", or nothing by
+  setting it to anything else. LOG_MODE defaults to only "errors".
 
 ### Substrate node
 
--   `SAS_SUBSTRATE_WS_URL`: WebSocket URL to which the RPC proxy will attempt to connect to, defaults to
-    `ws://127.0.0.1:9944`.
+- `SAS_SUBSTRATE_WS_URL`: WebSocket URL to which the RPC proxy will attempt to connect to, defaults to
+  `ws://127.0.0.1:9944`.
 
 #### Custom substrate types
 
@@ -176,7 +176,7 @@ the type formats (see `RegisteredTypes`).
 @polkadot/apps-config.
 
 - `SAS_SUBSTRATE_TYPES_BUNDLE`: a bundle of types with versioning info, type aliases, derives, and
-    rpc definitions. Format: `OverrideBundleType` (see [`typesBundle`](https://github.com/polkadot-js/api/blob/21039dec1fcad36061a96bf5526248c5fab38780/packages/types/src/types/registry.ts#L72)).
+  rpc definitions. Format: `OverrideBundleType` (see [`typesBundle`](https://github.com/polkadot-js/api/blob/21039dec1fcad36061a96bf5526248c5fab38780/packages/types/src/types/registry.ts#L72)).
 - `SAS_SUBSTRATE_TYPES_CHAIN`: type definitions keyed by `chainName`. Format: `Record<string, RegistryTypes>` (see [`typesChain`](https://github.com/polkadot-js/api/blob/21039dec1fcad36061a96bf5526248c5fab38780/packages/types/src/types/registry.ts#L76)).
 - `SAS_SUBSTRATE_TYPES_SPEC`: type definitions keyed by `specName`. Format: `Record<string, RegistryTypes>` (see [`typesSpec`](https://github.com/polkadot-js/api/blob/21039dec1fcad36061a96bf5526248c5fab38780/packages/types/src/types/registry.ts#L80)).
 - `SAS_SUBSTRATE_TYPES`: type definitions and overrides, not keyed. Format: `RegistryTypes` (see [`types`](https://github.com/polkadot-js/api/blob/21039dec1fcad36061a96bf5526248c5fab38780/packages/types/src/types/registry.ts#L64)).
@@ -192,8 +192,8 @@ JSON `types` file like so:
 ```json
 // my-chains-types.json
 {
-  "Address": "AccountId",
-  "LookupSource": "AccountId"
+	"Address": "AccountId",
+	"LookupSource": "AccountId"
 }
 ```
 
@@ -206,19 +206,19 @@ export SAS_SUBSTRATE_TYPES=/path/to/my-chains-types.json
 ### Logging
 
 - `SAS_LOG_LEVEL`: the lowest priority log level to surface, defaults to `info`. Tip: set to `http`
-    to see all HTTP requests.
+  to see all HTTP requests.
 - `SAS_LOG_JSON`: wether or not to have logs formatted as JSON, defaults to `false`.
-    Useful when using `stdout` to programmatically process Sidecar log data.
+  Useful when using `stdout` to programmatically process Sidecar log data.
 - `SAS_LOG_FILTER_RPC`: wether or not to filter polkadot-js API-WS RPC logging, defaults to `false`.
 - `SAS_LOG_STRIP_ANSI`: wether or not to strip ANSI characters from logs, defaults
-    to `false`. Useful when logging RPC calls with JSON written to transports.
+  to `false`. Useful when logging RPC calls with JSON written to transports.
 
 #### Log levels
 
 Log levels in order of decreasing importance are: `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly`.
 
 | http status code range | log level |
-|------------------------|-----------|
+| ---------------------- | --------- |
 | `code` < 400           | `http`    |
 | 400 <= `code` < 500    | `warn`    |
 | 500 < `code`           | `error`   |
@@ -307,34 +307,34 @@ All the commits in this repo follow the [Conventional Commits spec](https://www.
 
 1. Ensure we have the latest polkadot-js dependencies. Note: Every monday the polkadot-js ecosystem will usually come out with a new release. It's important that we keep up, and read the release notes for any breaking changes, or high priority updates. You can use the following command `yarn upgrade-interactive` to find and update all available releases. Feel free to update other packages that are available for upgrade if reasonable. To upgrade just `@polkadot` scoped deps use `yarn up "@polkadot/*"`
 
-    - @polkadot/api [release notes](https://github.com/polkadot-js/api/releases)
-    - @polkadot/apps-config [release notes](https://github.com/polkadot-js/apps/releases)
-      - If there are any major changes to this package that includes third party type packages, its worth noting to contact the maintainers of sidecar and do a peer review of the changes in apps-config, and make sure no bugs will be inherited.
-    - @polkadot/util-crypto [release notes](https://github.com/polkadot-js/common/releases)
-    - @substrate/calc [npm release page](https://www.npmjs.com/package/@substrate/calc)
+   - @polkadot/api [release notes](https://github.com/polkadot-js/api/releases)
+   - @polkadot/apps-config [release notes](https://github.com/polkadot-js/apps/releases)
+     - If there are any major changes to this package that includes third party type packages, its worth noting to contact the maintainers of sidecar and do a peer review of the changes in apps-config, and make sure no bugs will be inherited.
+   - @polkadot/util-crypto [release notes](https://github.com/polkadot-js/common/releases)
+   - @substrate/calc [npm release page](https://www.npmjs.com/package/@substrate/calc)
 
-1. Next make sure the resolutions are up to date inside of the `package.json` to match polkadot-js [here](https://github.com/polkadot-js/apps/blob/master/package.json). This is a manual process, and the packages we want to update are only the ones with `@polkadot` appended to it. If any issues may surface, contact the maintainers. 
+1. Next make sure the resolutions are up to date inside of the `package.json` to match polkadot-js [here](https://github.com/polkadot-js/apps/blob/master/package.json). This is a manual process, and the packages we want to update are only the ones with `@polkadot` appended to it. If any issues may surface, contact the maintainers.
 
 1. After updating the dependencies and resolutions (if applicable), the next step is making sure the release will work against all relevant runtimes for Polkadot, Kusama, and Westend. This can be handled by running `yarn test:init-e2e-tests`. You must have `python3`, and the dependencies inside of `./scripts/requirements.txt` installed to run the script (Read the [README](./scripts/README.md) for more instructions). Before moving forward ensure all tests pass, and if it warns of any missing types feel free to make an issue [here](https://github.com/paritytech/substrate-api-sidecar/issues).
 
-    Note that the e2e tests will connect to running nodes in order to test sidecar against real data, and they may fail owing to those connections taking too long to establish. If you run into any failures, try running tests just for the chain that failed with something like `yarn test:init-e2e-tests:polkadot`.
+   Note that the e2e tests will connect to running nodes in order to test sidecar against real data, and they may fail owing to those connections taking too long to establish. If you run into any failures, try running tests just for the chain that failed with something like `yarn test:init-e2e-tests:polkadot`.
 
 1. Update the version in the package.json (this is very important for releasing on NPM).
 
 1. Update `CHANGELOG.md` by looking at merged PRs since the last release. Follow the format of previous releases. Only record dep updates if they reflect type definition updates as those affect the users API.
 
-    Make sure to note if it is a high upgrade priority (e.g. it has type definitions for an upcoming runtime upgrade to a Parity maintained network).
+   Make sure to note if it is a high upgrade priority (e.g. it has type definitions for an upcoming runtime upgrade to a Parity maintained network).
 
 1. Commit with ex: `chore(release): 5.0.1`, then `git push` your release branch up, make a PR, get review approval, then merge.
 
-    **NOTE**: Before pushing up as a sanity check run the following 4 commands and ensure they all run with zero errors. There is one exception with `yarn test` where you will see errors logged, that is expected as long as all the test suites pass.
+   **NOTE**: Before pushing up as a sanity check run the following 4 commands and ensure they all run with zero errors. There is one exception with `yarn test` where you will see errors logged, that is expected as long as all the test suites pass.
 
-    ```bash
-    yarn dedupe
-    yarn build
-    yarn lint
-    yarn test
-    ```
+   ```bash
+   yarn dedupe
+   yarn build
+   yarn lint
+   yarn test
+   ```
 
 1. If one of the commits for this release includes the `calc` directory and package, make sure to follow the instructions below for releasing it on npm (if a new version hasn't yet been released seperately).
 
@@ -344,10 +344,10 @@ All the commits in this repo follow the [Conventional Commits spec](https://www.
 
 1. Make sure the tag reflects your corresponding version, and run:
 
-    ```bash
-    git tag v5.0.1
-    git push origin v5.0.1
-    ```
+   ```bash
+   git tag v5.0.1
+   git push origin v5.0.1
+   ```
 
 1. Go to [tags](https://github.com/paritytech/substrate-api-sidecar/tags) on github, inside of the repo, and click the three dots to the far right and select the option to create a release.
 
@@ -361,10 +361,10 @@ NOTE: You must be a member of the `@substrate` NPM org and must belong to the `D
 
 2. Run the following commands. (Please ensure you have 2FA enabled)
 
-    ```bash
-    npm login # Only necessary if not already logged in
-    yarn deploy # Builds JS target and then runs npm publish
-    ```
+   ```bash
+   npm login # Only necessary if not already logged in
+   yarn deploy # Builds JS target and then runs npm publish
+   ```
 
 #### Calc Package Release Prep
 
