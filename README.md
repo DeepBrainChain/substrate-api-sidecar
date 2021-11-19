@@ -32,6 +32,7 @@ yarn
 # cargo install wasm-pack
 # cd substrate-api-sidecar/calc && ./build.sh
 
+export SAS_SUBSTRATE_TYPES="./dbc_types.json"
 export SAS_SUBSTRATE_WS_URL=wss://info.dbcwallet.io
 export SAS_EXPRESS_BIND_HOST="0.0.0.0"
 
