@@ -1,4 +1,4 @@
-FROM docker.io/library/node:15 as builder
+FROM docker.io/library/node:18.12.1-alpine as builder
 
 WORKDIR /opt/builder
 
@@ -9,7 +9,7 @@ RUN yarn install && \
 
 # ---------------------------------
 
-FROM docker.io/library/node:15-alpine
+FROM docker.io/library/node:18.12.1-alpine
 
 # metadata
 ARG VERSION=""
@@ -36,5 +36,6 @@ COPY --from=builder /opt/builder /usr/src/app
 ENV SAS_EXPRESS_PORT=8080
 ENV SAS_EXPRESS_BIND_HOST=0.0.0.0
 
+USER node
 EXPOSE ${SAS_EXPRESS_PORT}
 CMD [ "node", "build/src/main.js" ]

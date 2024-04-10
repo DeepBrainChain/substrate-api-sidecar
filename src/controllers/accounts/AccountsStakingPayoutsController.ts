@@ -1,11 +1,30 @@
-import { ApiPromise } from '@polkadot/api';
-import { Option } from '@polkadot/types';
+// Copyright 2017-2024 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import type { ApiPromise } from '@polkadot/api';
+import type { ApiDecoration } from '@polkadot/api/types';
+import { Option, u32 } from '@polkadot/types';
 import BN from 'bn.js';
 import { RequestHandler } from 'express';
 import { BadRequest, InternalServerError } from 'http-errors';
 
-import { validateAddress } from '../../middleware';
+import { validateAddress, validateBoolean } from '../../middleware';
 import { AccountsStakingPayoutsService } from '../../services';
+import { IEarlyErasBlockInfo } from '../../services/accounts/AccountsStakingPayoutsService';
+import kusamaEarlyErasBlockInfo from '../../services/accounts/kusamaEarlyErasBlockInfo.json';
 import { IAddressParam } from '../../types/requests';
 import AbstractController from '../AbstractController';
 
@@ -62,16 +81,12 @@ import AbstractController from '../AbstractController';
  */
 export default class AccountsStakingPayoutsController extends AbstractController<AccountsStakingPayoutsService> {
 	constructor(api: ApiPromise) {
-		super(
-			api,
-			'/accounts/:address/staking-payouts',
-			new AccountsStakingPayoutsService(api)
-		);
+		super(api, '/accounts/:address/staking-payouts', new AccountsStakingPayoutsService(api));
 		this.initRoutes();
 	}
 
 	protected initRoutes(): void {
-		this.router.use(this.path, validateAddress);
+		this.router.use(this.path, validateAddress, validateBoolean(['unclaimedOnly']));
 
 		this.safeMountAsyncGetHandlers([['', this.getStakingPayoutsByAccountId]]);
 	}
@@ -83,12 +98,31 @@ export default class AccountsStakingPayoutsController extends AbstractController
 	 * @param res Express Response
 	 */
 	private getStakingPayoutsByAccountId: RequestHandler<IAddressParam> = async (
-		{ params: { address }, query: { depth, era, unclaimedOnly } },
-		res
+		{ params: { address }, query: { depth, era, unclaimedOnly, at } },
+		res,
 	): Promise<void> => {
-		const { hash, eraArg, currentEra } = await this.getEraAndHash(
-			this.verifyAndCastOr('era', era, undefined)
-		);
+		const earlyErasBlockInfo: IEarlyErasBlockInfo = kusamaEarlyErasBlockInfo;
+		let hash = await this.getHashFromAt(at);
+		let apiAt = await this.api.at(hash);
+		const runtimeInfo = await this.api.rpc.state.getRuntimeVersion(hash);
+		const isKusama = runtimeInfo.specName.toString().toLowerCase() === 'kusama';
+		const { eraArg, currentEra } = await this.getEraAndHash(apiAt, this.verifyAndCastOr('era', era, undefined));
+		if (currentEra <= 519 && depth !== undefined && isKusama) {
+			throw new InternalServerError('The `depth` query parameter is disabled for eras less than 518.');
+		} else if (currentEra <= 519 && era !== undefined && isKusama) {
+			throw new InternalServerError('The `era` query parameter is disabled for eras less than 518.');
+		}
+		let sanitizedDepth: string | undefined;
+		if (depth && isKusama) {
+			sanitizedDepth = Math.min(Number(depth), currentEra - 518).toString();
+		} else if (depth) {
+			sanitizedDepth = depth as string;
+		}
+		if (currentEra < 518 && isKusama) {
+			const eraStartBlock: number = earlyErasBlockInfo[currentEra].start;
+			hash = await this.getHashFromAt(eraStartBlock.toString());
+			apiAt = await this.api.at(hash);
+		}
 
 		const unclaimedOnlyArg = unclaimedOnly === 'false' ? false : true;
 
@@ -97,32 +131,21 @@ export default class AccountsStakingPayoutsController extends AbstractController
 			await this.service.fetchAccountStakingPayout(
 				hash,
 				address,
-				this.verifyAndCastOr('depth', depth, 1) as number,
+				this.verifyAndCastOr('depth', sanitizedDepth, 1) as number,
 				eraArg,
 				unclaimedOnlyArg,
-				currentEra
-			)
+				currentEra,
+				apiAt,
+			),
 		);
 	};
 
-	private async getEraAndHash(era?: number) {
-		const [hash, activeEraOption, currentEraMaybeOption] = await Promise.all([
-			this.api.rpc.chain.getFinalizedHead(),
-			this.api.query.staking.activeEra(),
-			this.api.query.staking.currentEra(),
-		]);
-
-		if (activeEraOption.isNone) {
-			throw new InternalServerError('ActiveEra is None when Some was expected');
-		}
-		const activeEra = activeEraOption.unwrap().index.toNumber();
-
-		let currentEra;
+	private async getEraAndHash(apiAt: ApiDecoration<'promise'>, era?: number) {
+		let currentEra: number;
+		const currentEraMaybeOption = (await apiAt.query.staking.currentEra()) as u32 & Option<u32>;
 		if (currentEraMaybeOption instanceof Option) {
 			if (currentEraMaybeOption.isNone) {
-				throw new InternalServerError(
-					'CurrentEra is None when Some was expected'
-				);
+				throw new InternalServerError('CurrentEra is None when Some was expected');
 			}
 
 			currentEra = currentEraMaybeOption.unwrap().toNumber();
@@ -130,20 +153,42 @@ export default class AccountsStakingPayoutsController extends AbstractController
 			// EraIndex extends u32, which extends BN so this should always be true
 			currentEra = (currentEraMaybeOption as BN).toNumber();
 		} else {
-			throw new InternalServerError(
-				'Query for current_era returned a non-processable result.'
-			);
+			throw new InternalServerError('Query for current_era returned a non-processable result.');
+		}
+
+		let activeEra;
+		if (apiAt.query.staking.activeEra) {
+			const activeEraOption = await apiAt.query.staking.activeEra();
+			if (activeEraOption.isNone) {
+				const historicActiveEra = await apiAt.query.staking.currentEra();
+				if (historicActiveEra.isNone) {
+					throw new InternalServerError('ActiveEra is None when Some was expected');
+				} else {
+					activeEra = historicActiveEra.unwrap().toNumber();
+				}
+			} else {
+				activeEra = activeEraOption.unwrap().index.toNumber();
+			}
+		} else {
+			const sessionIndex = await apiAt.query.session.currentIndex();
+			const idx = sessionIndex.toNumber() % 6;
+			// https://substrate.stackexchange.com/a/2026/1786
+			if (currentEra < 518) {
+				activeEra = currentEra;
+			} else if (idx > 0) {
+				activeEra = currentEra;
+			} else {
+				activeEra = currentEra - 1;
+			}
 		}
 
 		if (era !== undefined && era > activeEra - 1) {
 			throw new BadRequest(
-				`The specified era (${era}) is too large. ` +
-					`Largest era payout info is available for is ${activeEra - 1}`
+				`The specified era (${era}) is too large. ` + `Largest era payout info is available for is ${activeEra - 1}`,
 			);
 		}
 
 		return {
-			hash,
 			eraArg: era === undefined ? activeEra - 1 : era,
 			currentEra,
 		};

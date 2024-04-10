@@ -1,3 +1,19 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import { ApiPromise } from '@polkadot/api';
 
 import { TransactionFeeEstimateService } from '../../services';
@@ -32,19 +48,12 @@ import AbstractController from '../AbstractController';
  */
 export default class TransactionFeeEstimateController extends AbstractController<TransactionFeeEstimateService> {
 	constructor(api: ApiPromise) {
-		super(
-			api,
-			'/transaction/fee-estimate',
-			new TransactionFeeEstimateService(api)
-		);
+		super(api, '/transaction/fee-estimate', new TransactionFeeEstimateService(api));
 		this.initRoutes();
 	}
 
 	protected initRoutes(): void {
-		this.router.post(
-			this.path,
-			TransactionFeeEstimateController.catchWrap(this.txFeeEstimate)
-		);
+		this.router.post(this.path, TransactionFeeEstimateController.catchWrap(this.txFeeEstimate));
 	}
 
 	/**
@@ -54,10 +63,7 @@ export default class TransactionFeeEstimateController extends AbstractController
 	 * @param req Sidecar TxRequest
 	 * @param res Express Response
 	 */
-	private txFeeEstimate: IPostRequestHandler<ITx> = async (
-		{ body: { tx } },
-		res
-	): Promise<void> => {
+	private txFeeEstimate: IPostRequestHandler<ITx> = async ({ body: { tx } }, res): Promise<void> => {
 		if (!tx) {
 			throw {
 				error: 'Missing field `tx` on request body.',
@@ -66,9 +72,6 @@ export default class TransactionFeeEstimateController extends AbstractController
 
 		const hash = await this.api.rpc.chain.getFinalizedHead();
 
-		TransactionFeeEstimateController.sanitizedSend(
-			res,
-			await this.service.fetchTransactionFeeEstimate(hash, tx)
-		);
+		TransactionFeeEstimateController.sanitizedSend(res, await this.service.fetchTransactionFeeEstimate(hash, tx));
 	};
 }

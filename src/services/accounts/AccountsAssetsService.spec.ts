@@ -1,6 +1,48 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import { ApiPromise } from '@polkadot/api';
+import { ApiDecoration } from '@polkadot/api/types';
+import { Hash } from '@polkadot/types/interfaces';
+
 import { sanitizeNumbers } from '../../sanitize/sanitizeNumbers';
-import { blockHash789629, mockApi } from '../test-helpers/mock';
+import { blockHash789629, defaultMockApi } from '../test-helpers/mock';
+import {
+	assetApprovals,
+	assetsAccount,
+	assetsInfoKeysInjected,
+	assetsMetadata,
+} from '../test-helpers/mock/assets/mockAssetData';
 import { AccountsAssetsService } from './AccountsAssetsService';
+
+const historicApi = {
+	query: {
+		assets: {
+			account: assetsAccount,
+			approvals: assetApprovals,
+			asset: assetsInfoKeysInjected(),
+			metadata: assetsMetadata,
+		},
+	},
+} as unknown as ApiDecoration<'promise'>;
+
+const mockApi = {
+	...defaultMockApi,
+	at: (_hash: Hash) => historicApi,
+} as unknown as ApiPromise;
 
 const accountsAssetsService = new AccountsAssetsService(mockApi);
 
@@ -33,7 +75,7 @@ describe('AccountsAssetsService', () => {
 			const response = await accountsAssetsService.fetchAssetBalances(
 				blockHash789629,
 				'0xffff', // AccountId arg here does not affect the test results
-				[10, 20]
+				[10, 20],
 			);
 
 			expect(sanitizeNumbers(response)).toStrictEqual(expectedResponse);
@@ -67,7 +109,7 @@ describe('AccountsAssetsService', () => {
 			const response = await accountsAssetsService.fetchAssetBalances(
 				blockHash789629,
 				'0xffff', // AccountId arg here does not affect the test results
-				[]
+				[],
 			);
 
 			expect(sanitizeNumbers(response)).toStrictEqual(expectedResponse);
@@ -86,7 +128,7 @@ describe('AccountsAssetsService', () => {
 				blockHash789629,
 				'', // AccountId arg here does not affect the test results
 				10,
-				'' // Delegate arg here does not affect the test results
+				'', // Delegate arg here does not affect the test results
 			);
 
 			expect(sanitizeNumbers(response)).toStrictEqual(expectedResponse);

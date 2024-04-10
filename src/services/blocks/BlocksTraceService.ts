@@ -1,11 +1,25 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import { ApiDecoration } from '@polkadot/api/types';
 import { BlockHash } from '@polkadot/types/interfaces';
 import { BlockTrace as PdJsBlockTrace } from '@polkadot/types/interfaces';
 import { InternalServerError } from 'http-errors';
 
-import {
-	BlocksTrace,
-	BlocksTraceOperations,
-} from '../../types/responses/BlocksTrace';
+import { BlocksTrace, BlocksTraceOperations } from '../../types/responses/BlocksTrace';
 import { AbstractService } from '../AbstractService';
 import { BlockTrace, StringValues, Trace } from './trace';
 
@@ -48,15 +62,13 @@ export class BlocksTraceService extends AbstractService {
 	async traces(hash: BlockHash): Promise<BlocksTrace> {
 		const [{ number }, traceResponse] = await Promise.all([
 			this.api.rpc.chain.getHeader(hash),
-			this.api.rpc.state.traceBlock(hash, DEFAULT_TARGETS, DEFAULT_KEYS),
+			this.api.rpc.state.traceBlock(hash, DEFAULT_TARGETS, DEFAULT_KEYS, null),
 		]);
 
 		if (traceResponse.isTraceError) {
 			throw new InternalServerError(`${traceResponse.asTraceError.toString()}`);
 		} else {
-			const formattedTrace = BlocksTraceService.formatBlockTrace(
-				traceResponse.asBlockTrace
-			);
+			const formattedTrace = BlocksTraceService.formatBlockTrace(traceResponse.asBlockTrace);
 			return {
 				at: {
 					hash,
@@ -74,17 +86,19 @@ export class BlocksTraceService extends AbstractService {
 	 * Get the balance changing operations induced by a block.
 	 *
 	 * @param hash `BlockHash` to get balance transfer operations at.
+	 * @param historicApi ApiDecoration used to retrieve the correct registry
 	 * @param includeActions whether or not to include `actions` field in the response.
 	 */
 	async operations(
 		hash: BlockHash,
-		includeActions: boolean
+		historicApi: ApiDecoration<'promise'>,
+		includeActions: boolean,
 	): Promise<BlocksTraceOperations> {
 		const [{ block }, traceResponse] = await Promise.all([
 			// Note: this should be getHeader, but the type registry on chain_getBlock is the only
 			// one that actually has the historical types. https://github.com/polkadot-js/api/issues/3487
 			this.api.rpc.chain.getBlock(hash),
-			this.api.rpc.state.traceBlock(hash, DEFAULT_TARGETS, DEFAULT_KEYS),
+			this.api.rpc.state.traceBlock(hash, DEFAULT_TARGETS, DEFAULT_KEYS, null),
 		]);
 
 		if (traceResponse.isTraceError) {
@@ -93,7 +107,7 @@ export class BlocksTraceService extends AbstractService {
 			const trace = new Trace(
 				this.api,
 				BlocksTraceService.formatBlockTrace(traceResponse.asBlockTrace),
-				block.registry
+				historicApi.registry,
 			);
 
 			const { operations, actions } = trace.actionsAndOps();
@@ -117,38 +131,31 @@ export class BlocksTraceService extends AbstractService {
 	 * @param blockTrace Polkadot-js BlockTrace
 	 */
 	private static formatBlockTrace(blockTrace: PdJsBlockTrace): BlockTrace {
-		const events = blockTrace.events.map(
-			({ parentId, target, data: { stringValues } }) => {
-				const formattedStringValues = [...stringValues.entries()].reduce(
-					(acc, [k, v]) => {
-						acc[k.toString()] = v.toString();
+		const events = blockTrace.events.map(({ parentId, target, data: { stringValues } }) => {
+			const formattedStringValues = [...stringValues.entries()].reduce((acc, [k, v]) => {
+				acc[k.toString()] = v.toString();
 
-						return acc;
-					},
-					{} as StringValues
-				);
+				return acc;
+			}, {} as StringValues);
 
-				return {
-					parentId: parentId.isSome ? parentId.unwrap().toNumber() : null,
-					target: target.toString(),
-					data: {
-						stringValues: formattedStringValues,
-					},
-				};
-			}
-		);
+			return {
+				parentId: parentId.isSome ? parentId.unwrap().toNumber() : null,
+				target: target.toString(),
+				data: {
+					stringValues: formattedStringValues,
+				},
+			};
+		});
 
-		const spans = blockTrace.spans.map(
-			({ id, name, parentId, target, wasm }) => {
-				return {
-					id: id.toNumber(),
-					parentId: parentId.isSome ? parentId.unwrap().toNumber() : null,
-					name: name.toString(),
-					target: target.toString(),
-					wasm: wasm.toJSON(),
-				};
-			}
-		);
+		const spans = blockTrace.spans.map(({ id, name, parentId, target, wasm }) => {
+			return {
+				id: id.toNumber(),
+				parentId: parentId.isSome ? parentId.unwrap().toNumber() : null,
+				name: name.toString(),
+				target: target.toString(),
+				wasm: wasm.toJSON(),
+			};
+		});
 
 		return {
 			storageKeys: blockTrace.storageKeys.toString(),

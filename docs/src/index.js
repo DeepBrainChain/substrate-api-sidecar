@@ -6,5 +6,5 @@ const spec = require('./openapi-v1.yaml');
 const ui = SwaggerUI({
   spec,
   dom_id: '#spec',
+  supportedSubmitMethods: ["get", "post"]
 });
-

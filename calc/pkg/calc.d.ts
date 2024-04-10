@@ -1,26 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
-*/
-export class CalcFee {
-  free(): void;
-/**
-* @param {any} polynomial
-* @param {string} multiplier
-* @param {string} per_byte_fee
-* @param {string} spec_name
-* @param {number} spec_version
-* @returns {CalcFee | undefined}
-*/
-  static from_params(polynomial: any, multiplier: string, per_byte_fee: string, spec_name: string, spec_version: number): CalcFee | undefined;
-/**
-* @param {BigInt} weight
-* @param {number} len
-* @param {BigInt} extrinsic_base_weight
+* @param {string} base_fee
+* @param {string} len_fee
+* @param {string} adjusted_weight_fee
+* @param {string} estimated_weight
+* @param {string} actual_weight
 * @returns {string}
 */
-  calc_fee(weight: BigInt, len: number, extrinsic_base_weight: BigInt): string;
-}
+export function calc_partial_fee(base_fee: string, len_fee: string, adjusted_weight_fee: string, estimated_weight: string, actual_weight: string): string;
 /**
 */
 export class CalcPayout {

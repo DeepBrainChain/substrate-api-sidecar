@@ -1,8 +1,25 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import { ApiPromise } from '@polkadot/api';
 import { stringCamelCase } from '@polkadot/util';
 import { RequestHandler } from 'express-serve-static-core';
 
 import { PalletsStorageService } from '../../services';
+import { IPalletsStorageParam, IPalletsStorageQueryParam } from '../../types/requests';
 import AbstractController from '../AbstractController';
 
 /**
@@ -26,55 +43,48 @@ export default class PalletsStorageController extends AbstractController<Pallets
 	}
 
 	protected initRoutes(): void {
-		// TODO look into middleware validation of in path IDs. https://github.com/paritytech/substrate-api-sidecar/issues/281
 		this.safeMountAsyncGetHandlers([
-			['/:storageItemId', this.getStorageItem],
+			['/:storageItemId', this.getStorageItem as RequestHandler],
 			['/', this.getStorage],
 		]);
 	}
 
-	private getStorageItem: RequestHandler = async (
-		{
-			query: { at, key1, key2, metadata },
-			params: { palletId, storageItemId },
-		},
-		res
+	private getStorageItem: RequestHandler<IPalletsStorageParam, unknown, unknown, IPalletsStorageQueryParam> = async (
+		{ query: { at, keys, metadata }, params: { palletId, storageItemId } },
+		res,
 	): Promise<void> => {
-		const key1Arg = typeof key1 === 'string' ? key1 : undefined;
-		const key2Arg = typeof key2 === 'string' ? key2 : undefined;
-		const metadataArg = metadata === 'true' ? true : false;
+		const parsedKeys = Array.isArray(keys) ? keys : [];
+		const metadataArg = metadata === 'true';
 
 		const hash = await this.getHashFromAt(at);
+		const historicApi = await this.api.at(hash);
 
 		PalletsStorageController.sanitizedSend(
 			res,
-			await this.service.fetchStorageItem({
+			await this.service.fetchStorageItem(historicApi, {
 				hash,
 				// stringCamelCase ensures we don't have snake case or kebab case
 				palletId: stringCamelCase(palletId),
 				storageItemId: stringCamelCase(storageItemId),
-				key1: key1Arg,
-				key2: key2Arg,
+				keys: parsedKeys,
 				metadata: metadataArg,
-			})
+			}),
 		);
 	};
 
-	private getStorage: RequestHandler = async (
-		{ params: { palletId }, query: { at, onlyIds } },
-		res
-	): Promise<void> => {
-		const onlyIdsArg = onlyIds === 'true' ? true : false;
+	private getStorage: RequestHandler = async ({ params: { palletId }, query: { at, onlyIds } }, res): Promise<void> => {
+		const onlyIdsArg = onlyIds === 'true';
 
 		const hash = await this.getHashFromAt(at);
+		const historicApi = await this.api.at(hash);
 
 		PalletsStorageController.sanitizedSend(
 			res,
-			await this.service.fetchStorage({
+			await this.service.fetchStorage(historicApi, {
 				hash,
 				palletId: stringCamelCase(palletId),
 				onlyIds: onlyIdsArg,
-			})
+			}),
 		);
 	};
 }

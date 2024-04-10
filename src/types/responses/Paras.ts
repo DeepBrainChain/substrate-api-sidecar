@@ -1,12 +1,32 @@
-import { Option } from '@polkadot/types/codec';
-import { AbstractInt } from '@polkadot/types/codec/AbstractInt';
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import { Compact, Option } from '@polkadot/types/codec';
 import {
 	AccountId,
 	BalanceOf,
+	BlockNumber,
+	Digest,
 	FundInfo,
+	H256,
+	Hash,
 	ParaId,
 	ParaLifecycle,
 } from '@polkadot/types/interfaces';
+import { AbstractInt } from '@polkadot/types-codec/abstract';
 import BN from 'bn.js';
 
 import { IOption } from '../util';
@@ -50,9 +70,10 @@ export interface ICrowdloans {
 
 export interface LeaseFormatted {
 	/**
-	 * Lease period.
+	 * Lease period. The `leasePeriodIndex` can be null when the current block now,
+	 * substracted by the offset is less than zero.
 	 */
-	leasePeriodIndex: number;
+	leasePeriodIndex: number | null;
 	/**
 	 * Amount held on deposit for the lease period.
 	 */
@@ -132,13 +153,15 @@ export interface IAuctionsCurrent {
 export interface ILeasesCurrent {
 	at: IAt;
 	/**
-	 * The current lease period.
+	 * The current lease period. The `leasePeriodIndex` can be null when the current block now,
+	 * substracted by the offset is less than zero.
 	 */
-	leasePeriodIndex: BN;
+	leasePeriodIndex: BN | null;
 	/**
-	 * Last block of the current lease period.
+	 * Last block of the current lease period. The `endOfLeasePeriod` may be null
+	 * when the `leasePeriodIndex` is null.
 	 */
-	endOfLeasePeriod: BN;
+	endOfLeasePeriod: BN | null;
 	/**
 	 * ParaIds of current lease holders.
 	 */
@@ -167,4 +190,35 @@ export interface IParas {
 	 * All registered paras.
 	 */
 	paras: IPara[];
+}
+
+export interface IParasHeaders {
+	[x: string]: IParasHeaderData | IAt;
+}
+
+export interface IParasHeaderData {
+	/**
+	 * ParaHead of the parachain.
+	 */
+	hash: H256;
+	/**
+	 * Parent hash of the current block in the parachain.
+	 */
+	parentHash: Hash;
+	/**
+	 * The current block number.
+	 */
+	number: Compact<BlockNumber>;
+	/**
+	 * The state root after executing this block.
+	 */
+	stateRoot: Hash;
+	/**
+	 * The Merkle root of the extrinsics.
+	 */
+	extrinsicsRoot: Hash;
+	/**
+	 * `DigestItem`s associated with the block.
+	 */
+	digest: Digest;
 }

@@ -1,10 +1,24 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import { ApiDecoration } from '@polkadot/api/types';
+
 import { sanitizeNumbers } from '../../sanitize/sanitizeNumbers';
 import { kusamRegistryV2025 } from '../../test-helpers/registries';
-import {
-	blockHash789629,
-	mockApi,
-	mockBlock789629,
-} from '../test-helpers/mock';
+import { blockHash789629, defaultMockApi } from '../test-helpers/mock';
 import { keyNames } from '../test-helpers/mock/data/getKeyNames';
 import operationsResponse from '../test-helpers/responses/blocks/operations.json';
 import tracesResponse from '../test-helpers/responses/blocks/traces.json';
@@ -16,46 +30,39 @@ import { Trace } from './trace';
  * for testing and then reassign it back to the original after this test suite is done.
  */
 const tempGetKeyNames = Trace['getKeyNames'].bind(Trace);
+
 /**
- * Save the refference to the mockBlock789629's registry so we can reassign it back once
- * the tests are over.
+ * HistoricApi used in order to create the correct types per the blocks runtime.
  */
-const tempMockBlock789629Registry = mockBlock789629.registry;
+const mockHistoricApi = {
+	registry: kusamRegistryV2025,
+} as unknown as ApiDecoration<'promise'>;
 
 /**
  * BlocksTraceService mock
  */
-const blocksTraceService = new BlocksTraceService(mockApi);
+const blocksTraceService = new BlocksTraceService(defaultMockApi);
 
 beforeAll(() => {
-	// Override registry so we correctly create kusama types.
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-	(mockBlock789629 as any).registry = kusamRegistryV2025;
 	Trace['getKeyNames'] = () => keyNames;
 });
 
 afterAll(() => {
 	// Clean up our test specific overrides
 	Trace['getKeyNames'] = tempGetKeyNames;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-	(mockBlock789629 as any).registry = tempMockBlock789629Registry;
 });
 
 describe('BlocksTraceService', () => {
 	describe('BlocksTraceService.traces', () => {
 		it('works when ApiPromise works', async () => {
-			expect(
-				sanitizeNumbers(await blocksTraceService.traces(blockHash789629))
-			).toStrictEqual(tracesResponse);
+			expect(sanitizeNumbers(await blocksTraceService.traces(blockHash789629))).toStrictEqual(tracesResponse);
 		});
 	});
 
 	describe('BlocksTraceService.operations', () => {
 		it('works when ApiPromise works (without `actions`)', async () => {
 			expect(
-				sanitizeNumbers(
-					await blocksTraceService.operations(blockHash789629, false)
-				)
+				sanitizeNumbers(await blocksTraceService.operations(blockHash789629, mockHistoricApi, false)),
 			).toMatchObject(operationsResponse);
 		});
 

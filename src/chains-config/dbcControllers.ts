@@ -1,25 +1,20 @@
 import { ControllerConfig } from '../types/chains-config';
-import { getBlockWeight } from './metadata-consts';
+import { initLRUCache, QueryFeeDetailsCache } from './cache';
+// import { getBlockWeight } from './metadata-consts';
 /**
  * Statemine configuration for Sidecar.
  */
 export const dbcControllers: ControllerConfig = {
 	controllers: [
-        'AccountsAssets',
 		'AccountsBalanceInfo',
-		'AccountsStakingInfo',
-		'AccountsStakingPayouts',
-		'AccountsVestingInfo',
+		'AccountsValidate',
 		'Blocks',
 		'BlocksExtrinsics',
-		'BlocksTrace',
+		'BlocksRawExtrinsics',
 		'NodeNetwork',
 		'NodeTransactionPool',
 		'NodeVersion',
-        'PalletsAssets',
-		'PalletsStakingProgress',
 		'PalletsStorage',
-		'Paras',
 		'RuntimeCode',
 		'RuntimeMetadata',
 		'RuntimeSpec',
@@ -31,6 +26,7 @@ export const dbcControllers: ControllerConfig = {
 	options: {
 		finalizes: true,
 		minCalcFeeRuntime: 2,
-		blockWeightStore: getBlockWeight('node'),
+		blockStore: initLRUCache(),
+		hasQueryFeeApi: new QueryFeeDetailsCache(null, null),
 	},
 };

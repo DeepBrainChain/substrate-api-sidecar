@@ -1,30 +1,36 @@
 ## Summary
 
-This is a helper library for Sidecar to run runtime tests against specific chains, at certain blocks. 
+This is a helper library to run e2e tests. There are two types of tests to run:
 
-## Testing
+1. Historical: Tests that focus on the integrity of the api service with older runtimes. 
 
-The below instructions are specific to runtime-tests against one chain. 
-If you are looking to run the runtime-tests against all 3 chains (Polkadot, Kusama, Westend) then run `yarn test:init-runtime-tests` in 
-the root directory of sidecar.
+2. Latest: Tests that focus on the integrity of the api service with the current runtime, and most recent block. 
 
-### Polkadot 
+### Historical
 
-Lets first get sidecar ready in a seperate terminal.
+Historical tests use jest to run the api service at specific blocks where the result is known. Jest compares the known result to what we receive, and operates like any other test. It requires having the api service running against a live chain (Archive nodes are preferred). 
 
-```
-$ cd substrate-api-sidecar
-$ git checkout <your_branch>
-$ export SAS_SUBSTRATE_WS_URL=<network archive node>
-$ yarn
-$ yarn build && yarn start
+To run the tests locally:
+
+```bash
+$ yarn build:e2e-tests
+$ node ./e2e-tests/build/historical/historical.js --config=./e2e-tests/jest.config.js
 ```
 
-Sidecar should now be connected to the node and running successfully. If you find a bug file an issue [here](https://github.com/paritytech/substrate-api-sidecar/issues).
+`--chain`: The chain you would like to test against. It defaults to `polkadot`.
+`--config`: The path to the jest config.
 
-Now lets run our runtime tests against polkadot. Go to a separate terminal and run:
+### Latest
 
-`yarn test:runtime-tests --chain polkadot`
+Latest tests run a set of known endpoints with the latest block against the chain. The tests will pass as long as all the responses are succesfull. If any test is 400 or above it will fail, and log each failed query along with its error. 
 
-Thats it! 
-All the tests should come back with green checkmarks.
+To run the tests locally:
+
+```bash
+$ yarn build:e2e-tests
+$ node ./e2e-tests/build/latest/index.js
+```
+
+#### Flags
+
+`--chain`: The chain you would like to test against. It defaults to `polkadot`.

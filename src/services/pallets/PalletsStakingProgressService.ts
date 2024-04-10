@@ -1,4 +1,21 @@
+// Copyright 2017-2022 Parity Technologies (UK) Ltd.
+// This file is part of Substrate API Sidecar.
+//
+// Substrate API Sidecar is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import { ApiPromise } from '@polkadot/api';
+import { ApiDecoration } from '@polkadot/api/types';
 import { BlockHash, EraIndex } from '@polkadot/types/interfaces';
 import BN from 'bn.js';
 import { InternalServerError } from 'http-errors';
@@ -12,18 +29,16 @@ export class PalletsStakingProgressService extends AbstractService {
 	 *
 	 * @param hash `BlockHash` to make call at
 	 */
-	async derivePalletStakingProgress(
-		hash: BlockHash
-	): Promise<IPalletStakingProgress> {
+	async derivePalletStakingProgress(hash: BlockHash): Promise<IPalletStakingProgress> {
 		const { api } = this;
+		const historicApi = await api.at(hash);
 
-		const [validatorCount, forceEra, validators, { number }] =
-			await Promise.all([
-				api.query.staking.validatorCount.at(hash),
-				api.query.staking.forceEra.at(hash),
-				api.query.session.validators.at(hash),
-				api.rpc.chain.getHeader(hash),
-			]);
+		const [validatorCount, forceEra, validators, { number }] = await Promise.all([
+			historicApi.query.staking.validatorCount(),
+			historicApi.query.staking.forceEra(),
+			historicApi.query.session.validators(),
+			api.rpc.chain.getHeader(hash),
+		]);
 
 		let eraElectionStatus;
 		/**
@@ -32,26 +47,18 @@ export class PalletsStakingProgressService extends AbstractService {
 		 * runtime less than v0.8.30 it will return a successful result. If it doesn't
 		 * we do nothing and let `eraElectionStatus` stay undefined.
 		 */
-		if (api.query.staking.eraElectionStatus) {
-			eraElectionStatus = await api.query.staking.eraElectionStatus.at(hash);
+		if (historicApi.query.staking.eraElectionStatus) {
+			eraElectionStatus = await historicApi.query.staking.eraElectionStatus();
 		}
 
-		const {
-			eraLength,
-			eraProgress,
-			sessionLength,
-			sessionProgress,
-			activeEra,
-		} = await this.deriveSessionAndEraProgress(api, hash);
+		const { eraLength, eraProgress, sessionLength, sessionProgress, activeEra } =
+			await this.deriveSessionAndEraProgress(historicApi);
 
-		const unappliedSlashesAtActiveEra =
-			await api.query.staking.unappliedSlashes.at(hash, activeEra);
+		const unappliedSlashesAtActiveEra = await historicApi.query.staking.unappliedSlashes(activeEra);
 
 		const currentBlockNumber = number.toBn();
 
-		const nextSession = sessionLength
-			.sub(sessionProgress)
-			.add(currentBlockNumber);
+		const nextSession = sessionLength.sub(sessionProgress).add(currentBlockNumber);
 
 		const baseResponse = {
 			at: {
@@ -61,9 +68,7 @@ export class PalletsStakingProgressService extends AbstractService {
 			activeEra: activeEra.toString(10),
 			forceEra: forceEra.toJSON(),
 			nextSessionEstimate: nextSession.toString(10),
-			unappliedSlashes: unappliedSlashesAtActiveEra.map((slash) =>
-				slash.toJSON()
-			),
+			unappliedSlashes: unappliedSlashesAtActiveEra.map((slash) => slash.toJSON()),
 		};
 
 		if (forceEra.isForceNone) {
@@ -78,12 +83,9 @@ export class PalletsStakingProgressService extends AbstractService {
 			? nextSession // there is a new era every session
 			: eraLength.sub(eraProgress).add(currentBlockNumber); // the nextActiveEra is at the end of this era
 
-		const electionLookAhead = await this.deriveElectionLookAhead(api, hash);
+		const electionLookAhead = await this.deriveElectionLookAhead(api, historicApi, hash);
 
-		const nextCurrentEra = nextActiveEra
-			.sub(currentBlockNumber)
-			.sub(sessionLength)
-			.gt(new BN(0))
+		const nextCurrentEra = nextActiveEra.sub(currentBlockNumber).sub(sessionLength).gt(new BN(0))
 			? nextActiveEra.sub(sessionLength) // current era simply one session before active era
 			: nextActiveEra.add(eraLength).sub(sessionLength); // we are in the last session of an active era
 
@@ -119,56 +121,38 @@ export class PalletsStakingProgressService extends AbstractService {
 	 * @param api ApiPromise with ensured metadata
 	 * @param hash `BlockHash` to make call at
 	 */
-	private async deriveSessionAndEraProgress(
-		api: ApiPromise,
-		hash: BlockHash
-	): Promise<{
+	private async deriveSessionAndEraProgress(historicApi: ApiDecoration<'promise'>): Promise<{
 		eraLength: BN;
 		eraProgress: BN;
 		sessionLength: BN;
 		sessionProgress: BN;
 		activeEra: EraIndex;
 	}> {
-		const [
-			currentSlot,
-			epochIndex,
-			genesisSlot,
-			currentIndex,
-			activeEraOption,
-		] = await Promise.all([
-			api.query.babe.currentSlot.at(hash),
-			api.query.babe.epochIndex.at(hash),
-			api.query.babe.genesisSlot.at(hash),
-			api.query.session.currentIndex.at(hash),
-			api.query.staking.activeEra.at(hash),
+		const [currentSlot, epochIndex, genesisSlot, currentIndex, activeEraOption] = await Promise.all([
+			historicApi.query.babe.currentSlot(),
+			historicApi.query.babe.epochIndex(),
+			historicApi.query.babe.genesisSlot(),
+			historicApi.query.session.currentIndex(),
+			historicApi.query.staking.activeEra(),
 		]);
 
 		if (activeEraOption.isNone) {
 			// TODO refactor to newer error type
-			throw new InternalServerError(
-				'ActiveEra is None when Some was expected.'
-			);
+			throw new InternalServerError('ActiveEra is None when Some was expected.');
 		}
 		const { index: activeEra } = activeEraOption.unwrap();
 
-		const activeEraStartSessionIndexOption =
-			await api.query.staking.erasStartSessionIndex.at(hash, activeEra);
+		const activeEraStartSessionIndexOption = await historicApi.query.staking.erasStartSessionIndex(activeEra);
 		if (activeEraStartSessionIndexOption.isNone) {
-			throw new InternalServerError(
-				'EraStartSessionIndex is None when Some was expected.'
-			);
+			throw new InternalServerError('EraStartSessionIndex is None when Some was expected.');
 		}
-		const activeEraStartSessionIndex =
-			activeEraStartSessionIndexOption.unwrap();
+		const activeEraStartSessionIndex = activeEraStartSessionIndexOption.unwrap();
 
-		const { epochDuration: sessionLength } = api.consts.babe;
-		const eraLength = api.consts.staking.sessionsPerEra.mul(sessionLength);
+		const { epochDuration: sessionLength } = historicApi.consts.babe;
+		const eraLength = historicApi.consts.staking.sessionsPerEra.mul(sessionLength);
 		const epochStartSlot = epochIndex.mul(sessionLength).add(genesisSlot);
 		const sessionProgress = currentSlot.sub(epochStartSlot);
-		const eraProgress = currentIndex
-			.sub(activeEraStartSessionIndex)
-			.mul(sessionLength)
-			.add(sessionProgress);
+		const eraProgress = currentIndex.sub(activeEraStartSessionIndex).mul(sessionLength).add(sessionProgress);
 
 		return {
 			eraLength,
@@ -191,14 +175,15 @@ export class PalletsStakingProgressService extends AbstractService {
 	 */
 	private async deriveElectionLookAhead(
 		api: ApiPromise,
-		hash: BlockHash
+		historicApi: ApiDecoration<'promise'>,
+		hash: BlockHash,
 	): Promise<BN> {
-		if (api.consts.staking.electionLookahead) {
-			return api.consts.staking.electionLookahead as unknown as BN;
+		if (historicApi.consts.staking.electionLookahead) {
+			return historicApi.consts.staking.electionLookahead as unknown as BN;
 		}
 
 		const { specName } = await api.rpc.state.getRuntimeVersion(hash);
-		const { epochDuration } = api.consts.babe;
+		const { epochDuration } = historicApi.consts.babe;
 
 		// TODO - create a configurable epochDivisor env for a more generic solution
 		const epochDurationDivisor =
